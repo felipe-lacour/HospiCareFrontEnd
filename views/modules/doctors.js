@@ -1,7 +1,7 @@
 export function render() {
   return `
 <div class="px-4 sm:px-6 lg:px-8">
-  <div class="sm:flex sm:items-center">
+  <div class="sm:flex sm:items-center mt-4">
     <div class="sm:flex-auto">
       <h1 class="text-base font-semibold text-gray-900">Doctors</h1>
     </div>
@@ -72,7 +72,7 @@ export async function afterRender() {
         </tr>
     `).join('');
   } catch (err) {
-    document.getElementById('doctors-list').innerHTML = `<p class="text-red-500">Failed to fetch data</p>`;
+    document.getElementById('doctors-list').innerHTML = `<tr><td colspan="5" class="px-4 py-4 text-center text-red-500">Failed to fetch data</td></tr>`;
     console.error(err);
   }
 }
