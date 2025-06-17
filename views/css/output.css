@@ -952,6 +952,10 @@ video {
   height: 2rem;
 }
 
+.h-32 {
+  height: 8rem;
+}
+
 .max-h-\[60vh\] {
   max-height: 60vh;
 }
