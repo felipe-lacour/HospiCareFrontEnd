@@ -218,5 +218,3 @@ export async function afterRender() {
     }
   };
 }
-
-
