@@ -82,7 +82,7 @@ export async function afterRender() {
     }
 
     container.innerHTML = data.map(doctor => `
-        <tr id="doctor-${doctor.id}" class="hover:bg-gray-50">
+        <tr id="doctor-${doctor.doctor_id}" class="hover:bg-gray-50">
         <td class="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-6">${doctor.first_name} ${doctor.last_name}</td>
         <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${doctor.license_no}</td>
         <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${doctor.birth_date}</td>
@@ -98,11 +98,14 @@ export async function afterRender() {
         </tr>
     `).join('');
 
+
+
     const modal = document.getElementById('doctor-modal');
+    const form = document.getElementById('doctor-form');
     const openBtn = document.querySelector('button.bg-indigo-600'); // el botón "Add user"
     const cancelBtn = document.getElementById('cancel-doctor');
-    const form = document.getElementById('doctor-form');
-
+    const optionalInEditMode = ['dni', 'birth_date'];
+    
     // Mostrar el modal
     openBtn.addEventListener('click', () => {
       modal.classList.remove('hidden');
@@ -118,11 +121,13 @@ export async function afterRender() {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const token = localStorage.getItem('token');
+      const isEditing = form.hasAttribute('data-editing-id');
 
       // Validación simple
       const formData = new FormData(form);
       const entries = Object.fromEntries(formData.entries());
       for (const [key, value] of Object.entries(entries)) {
+        if (isEditing && optionalInEditMode.includes(key)) continue;
         if (!value.trim()) {
           alert(`Please fill in the ${key.replace('_', ' ')} field.`);
           return;
@@ -130,8 +135,14 @@ export async function afterRender() {
       }
       // Enviar doctor
       try {
-        const res = await fetch('http://localhost/HospiCareDev/BACKEND/public/doctors/store', {
-          method: 'POST',
+        const url = isEditing
+          ? `http://localhost/HospiCareDev/BACKEND/public/doctors/update?id=${form.getAttribute('data-editing-id')}`
+          : 'http://localhost/HospiCareDev/BACKEND/public/doctors/store';
+
+        const method = 'POST';
+
+        const res = await fetch(url, {
+          method,
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -139,90 +150,144 @@ export async function afterRender() {
           body: JSON.stringify(entries)
         });
 
-      const result = await res.json();
+        const result = await res.json();
 
-      if (res.ok) {
-        modal.classList.add('hidden');
-        form.reset();
-        
-        const newRow = `
-          <tr class="hover:bg-gray-50">
-            <td class="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-6">${entries.first_name} ${entries.last_name}</td>
-            <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.license_no}</td>
-            <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.birth_date}</td>
-            <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.email}</td>
-            <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.specialty}</td>
-            <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.phone}</td>
-            <td class="relative py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-6">
-              <div class="flex justify-end gap-3">
-                <button class="edit-btn"><img src="../../img/edit.svg" alt="Edit" class="h-5" /><span class="sr-only">Edit</span></button>
-                <button class="delete-btn"><img src="../../img/trash.svg" alt="Delete" class="h-5" /><span class="sr-only">Delete</span></button>
+        if (res.ok) {
+          modal.classList.add('hidden');
+          form.reset();
+          
+          const doctorId = form.getAttribute('data-editing-id') || 'new';
+          const newRow = `
+            <tr id="doctor-${doctorId}" class="hover:bg-gray-50">
+              <td class="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-6">${entries.first_name} ${entries.last_name}</td>
+              <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.license_no}</td>
+              <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.birth_date || '-'}</td>
+              <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.email}</td>
+              <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.specialty}</td>
+              <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${entries.phone}</td>
+              <td class="relative py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-6">
+                <div class="flex justify-end gap-3">
+                  <button class="edit-btn"><img src="../../img/edit.svg" alt="Edit" class="h-5" /><span class="sr-only">Edit</span></button>
+                  <button class="delete-btn"><img src="../../img/trash.svg" alt="Delete" class="h-5" /><span class="sr-only">Delete</span></button>
+                </div>
+              </td>
+            </tr>
+          `;
+
+          document.querySelector(`#doctor-${doctorId}`)?.remove();
+          container.insertAdjacentHTML('beforeend', newRow);
+
+          // Mostrar el setup link en un modal de copia
+          const link = result.setup_link;
+          const copyBox = document.createElement('div');
+          copyBox.innerHTML = `
+            <div class="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
+              <div class="bg-white rounded p-6 shadow-lg max-w-md w-full text-center">
+                <h2 class="text-lg font-semibold mb-2">Setup Link</h2>
+                <input type="text" id="linkInput" value="${link}" readonly class="w-full border p-2 rounded mb-4 text-sm text-gray-700">
+                <button id="copyLink" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500">Copy</button>
+                <button id="closeLinkModal" class="ml-2 text-gray-500 hover:underline">Close</button>
               </div>
-            </td>
-          </tr>
-        `;
-
-        container.insertAdjacentHTML('beforeend', newRow);
-
-        // Mostrar el setup link en un modal de copia
-        const link = result.setup_link;
-        const copyBox = document.createElement('div');
-        copyBox.innerHTML = `
-          <div class="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
-            <div class="bg-white rounded p-6 shadow-lg max-w-md w-full text-center">
-              <h2 class="text-lg font-semibold mb-2">Setup Link</h2>
-              <input type="text" id="linkInput" value="${link}" readonly class="w-full border p-2 rounded mb-4 text-sm text-gray-700">
-              <button id="copyLink" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500">Copy</button>
-              <button id="closeLinkModal" class="ml-2 text-gray-500 hover:underline">Close</button>
             </div>
-          </div>
-        `;
-        document.body.appendChild(copyBox);
+          `;
+          document.body.appendChild(copyBox);
 
-        // Copiar al portapapeles
-        document.getElementById('copyLink').addEventListener('click', async () => {
-          const input = document.getElementById('linkInput');
-          try {
-            await navigator.clipboard.writeText(input.value);
+          // Copiar al portapapeles
+          document.getElementById('copyLink').addEventListener('click', async () => {
+            const input = document.getElementById('linkInput');
+            try {
+              await navigator.clipboard.writeText(input.value);
 
-            // Remove existing toast if any
-            const existingToast = document.getElementById('toast-simple');
-            if (existingToast) existingToast.remove();
+              // Remove existing toast if any
+              const existingToast = document.getElementById('toast-simple');
+              if (existingToast) existingToast.remove();
 
-            // Create toast
-            const toast = document.createElement('div');
-            toast.id = 'toast-simple';
-            toast.className = 'fixed bottom-6 left-1/2 transform -translate-x-1/2 flex items-center w-full max-w-xs p-4 space-x-4 rtl:space-x-reverse text-gray-500 bg-white divide-x rtl:divide-x-reverse divide-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:divide-gray-700 dark:bg-gray-800 shadow-lg';
-            toast.innerHTML = `
-              <div class="ps-4 text-sm font-normal">Link copied to clipboard.</div>
-            `;
+              // Create toast
+              const toast = document.createElement('div');
+              toast.id = 'toast-simple';
+              toast.className = 'fixed bottom-6 left-1/2 transform -translate-x-1/2 flex items-center w-full max-w-xs p-4 space-x-4 rtl:space-x-reverse text-gray-500 bg-white divide-x rtl:divide-x-reverse divide-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:divide-gray-700 dark:bg-gray-800 shadow-lg';
+              toast.innerHTML = `
+                <div class="ps-4 text-sm font-normal">Link copied to clipboard.</div>
+              `;
 
-            document.body.appendChild(toast);
+              document.body.appendChild(toast);
 
-            // Auto-hide after 3 seconds
-            setTimeout(() => {
-              toast.remove();
-            }, 3000);
+              // Auto-hide after 3 seconds
+              setTimeout(() => {
+                toast.remove();
+              }, 3000);
 
-          } catch (err) {
-            console.error('Failed to copy', err);
-            alert('Could not copy to clipboard');
+            } catch (err) {
+              console.error('Failed to copy', err);
+              alert('Could not copy to clipboard');
+            }
+          });
+
+          // Cerrar el modal
+          document.getElementById('closeLinkModal').addEventListener('click', () => {
+            copyBox.remove();
+          });
+
+          form.removeAttribute('data-editing-id');
+          form.querySelector('[name="username"]')?.remove();
+
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Something went wrong while creating the doctor.');
+      }
+    });
+
+    // Detectar clic en botón Editar
+    document.querySelectorAll('.edit-btn').forEach(button => {
+      button.addEventListener('click', async (e) => {
+        const tr = e.currentTarget.closest('tr');
+        const doctorId = tr.id.split('-')[1];
+        const token = localStorage.getItem('token');
+
+        // Obtener datos del doctor
+        const res = await fetch(`http://localhost/HospiCareDev/BACKEND/public/doctors/show?id=${doctorId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
         });
+        const doctor = await res.json();
 
-        // Cerrar el modal
-        document.getElementById('closeLinkModal').addEventListener('click', () => {
-          copyBox.remove();
+        // Mostrar formulario y modo edición
+        modal.classList.remove('hidden');
+        form.setAttribute('data-editing-id', doctorId);
+
+        // Llenar los campos
+        form.querySelector('[name="first_name"]').value = doctor.first_name;
+        form.querySelector('[name="last_name"]').value = doctor.last_name;
+        form.querySelector('[name="address"]').value = doctor.address;
+        form.querySelector('[name="phone"]').value = doctor.phone;
+        form.querySelector('[name="email"]').value = doctor.email;
+        form.querySelector('[name="license_no"]').value = doctor.license_no;
+        form.querySelector('[name="specialty"]').value = doctor.specialty;
+
+        // Ocultar dni y fecha de nacimiento
+        form.querySelector('[name="dni"]').removeAttribute('required');
+        form.querySelector('[name="birth_date"]').removeAttribute('required');
+        form.querySelector('[name="dni"]').style.display = 'none';
+        form.querySelector('[name="birth_date"]').style.display = 'none';
+
+        // Agregar campo username si no existe
+        if (!form.querySelector('[name="username"]')) {
+          const usernameField = document.createElement('input');
+          usernameField.name = 'username';
+          usernameField.placeholder = 'Username';
+          usernameField.required = true;
+          usernameField.className = 'w-full border p-2 rounded';
+          form.insertBefore(usernameField, form.querySelector('.flex.justify-end'));
+        }
+
+        form.querySelector('[name="username"]').value = doctor.username;
       });
-
-    } else {
-      alert('Error: ' + result.error);
-    }
-  } catch (err) {
-    console.error(err);
-    alert('Something went wrong while creating the doctor.');
-  }
-});
+    });
+ 
   } catch (err) {
     document.getElementById('doctors-list').innerHTML = `<tr><td colspan="5" class="px-4 py-4 text-center text-red-500">Failed to fetch data</td></tr>`;
     console.error(err);
