@@ -80,6 +80,7 @@ export async function afterRender() {
     const openBtn = document.querySelector('button.bg-indigo-600');
     const cancelBtn = document.getElementById('cancel-doctor');
     const optionalInEditMode = ['dni', 'birth_date'];
+    let currentDoctorData = null; 
 
     if (!res.ok) {
       container.innerHTML = `<p class="text-red-500">Error: ${data.error}</p>`;
@@ -143,8 +144,20 @@ export async function afterRender() {
         form.reset();
 
         const doctorId = form.getAttribute('data-editing-id') || result.doctor_id;
-        document.querySelector(`#doctor-${doctorId}`)?.remove();
-        container.insertAdjacentHTML('beforeend', rowTemplate({ ...entries, doctor_id: doctorId }));
+
+        const updatedRow = rowTemplate({
+          ...currentEmployeeData,
+          ...entries,
+          doctor_id: doctorId,
+          dni: currentDoctorData.dni, // Asegurar que se mantenga
+          birth_date: currentDoctorData.birth_date // Asegurar que se mantenga
+        });
+        
+        const oldRow = document.querySelector(`#doctor-${doctorId}`);
+        if (oldRow) {
+          oldRow.outerHTML = updatedRow;
+        }
+
         bindEditButtons();
         form.removeAttribute('data-editing-id');
         form.querySelector('[name="username"]')?.remove();
@@ -190,7 +203,8 @@ export async function afterRender() {
               'Authorization': `Bearer ${token}`
             }
           });
-          const doctor = await res.json();
+          currentDoctorData = await res.json();
+          const doctor = currentDoctorData;
 
           modal.classList.remove('hidden');
           form.setAttribute('data-editing-id', doctorId);
