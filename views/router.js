@@ -40,7 +40,7 @@ export async function router() {
     const module = await import(`./modules/${route}.js`);
     const html = await module.render(...params); // ← pasar parámetros como MRN
     app.innerHTML = html;
-    if (module.afterRender) module.afterRender();
+    if (module.afterRender) module.afterRender(...params);
   } catch (e) {
     console.error(e);
     app.innerHTML = `<p class="text-red-500">Module "${route}" not found.</p>`;
