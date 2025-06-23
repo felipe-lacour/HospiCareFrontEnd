@@ -21,6 +21,16 @@ export async function router() {
     return;
   }
 
+  // 🔑 Password Setup — sin token requerido
+  if (route.startsWith('auth/set-password')) {
+    layoutRoot.innerHTML = '';
+    const module = await import(`./modules/setup.js`);
+    const html = await module.render();
+    layoutRoot.innerHTML = html;
+    if (module.afterRender) module.afterRender();
+    return;
+  }
+
   // 🔒 If no token, force redirect to login
   if (!token) {
     location.hash = 'login';
