@@ -104,6 +104,7 @@ export async function afterRender() {
       form.removeAttribute('data-editing-id');
       form.querySelector('[name="username"]')?.remove();
       restoreHiddenFields();
+      currentDoctorData = null; 
     });
 
     // Enviar formulario
@@ -145,23 +146,32 @@ export async function afterRender() {
 
         const doctorId = form.getAttribute('data-editing-id') || result.doctor_id;
 
-        const updatedRow = rowTemplate({
-          ...currentEmployeeData,
-          ...entries,
-          doctor_id: doctorId,
-          dni: currentDoctorData.dni, // Asegurar que se mantenga
-          birth_date: currentDoctorData.birth_date // Asegurar que se mantenga
-        });
+        const baseData = isEditing
+          ? {
+              ...currentDoctorData,
+              ...entries,
+              dni: currentDoctorData.dni,
+              birth_date: currentDoctorData.birth_date
+            }
+          : entries;
+
+        baseData.doctor_id = doctorId;
+        const updatedRow = rowTemplate(baseData);
         
-        const oldRow = document.querySelector(`#doctor-${doctorId}`);
-        if (oldRow) {
-          oldRow.outerHTML = updatedRow;
+        if (isEditing) {
+          const oldRow = document.querySelector(`#doctor-${doctorId}`);
+          if (oldRow) {
+            oldRow.outerHTML = updatedRow;
+          }
+        } else {
+          container.insertAdjacentHTML('beforeend', updatedRow);
         }
 
         bindEditButtons();
         form.removeAttribute('data-editing-id');
         form.querySelector('[name="username"]')?.remove();
         restoreHiddenFields();
+        currentDoctorData = null; 
 
         if (isEditing) {
           showToast('Doctor updated successfully!');

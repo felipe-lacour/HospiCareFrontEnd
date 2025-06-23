@@ -101,6 +101,7 @@ export async function afterRender() {
             form.removeAttribute('data-editing-id');
             form.querySelector('[name="username"]')?.remove();
             restoreHiddenFields();
+            currentEmployeeData = null;
         });
 
         // Enviar formulario
@@ -142,23 +143,32 @@ export async function afterRender() {
 
                 const employeeId = form.getAttribute('data-editing-id') || result.employee_id;
 
-                const updatedRow = rowTemplate({
-                    ...currentEmployeeData,
-                    ...entries,
-                    employee_id: employeeId,
-                    dni: currentEmployeeData.dni, // Asegurar que se mantenga
-                    birth_date: currentEmployeeData.birth_date // Asegurar que se mantenga
-                });
-                
-                const oldRow = document.querySelector(`#employee-${employeeId}`);
-                if (oldRow) {
-                    oldRow.outerHTML = updatedRow;
-                }
+                const baseData = isEditing
+                  ? {
+                      ...currentEmployeeData,
+                      ...entries,
+                      dni: currentEmployeeData.dni,
+                      birth_date: currentEmployeeData.birth_date
+                    }
+                  : entries;
 
+                baseData.employee_id = employeeId;
+                const updatedRow = rowTemplate(baseData);
+                
+                if (isEditing) {
+                  const oldRow = document.querySelector(`#employee-${employeeId}`);
+                  if (oldRow) {
+                    oldRow.outerHTML = updatedRow;
+                  }
+                } else {
+                  container.insertAdjacentHTML('beforeend', updatedRow);
+                }
+                
                 bindEditButtons();
                 form.removeAttribute('data-editing-id');
                 form.querySelector('[name="username"]')?.remove();
                 restoreHiddenFields();
+                currentEmployeeData = null;
 
                 if (isEditing) {
                     showToast('Employee updated successfully!');
