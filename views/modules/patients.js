@@ -155,7 +155,7 @@ export async function afterRender() {
         `;
         detailsModal.classList.remove('hidden');
         viewHistoryBtn.onclick = () => {
-          window.location.hash = `#history/${patient.person_id}`;
+          window.location.hash = `#history/${patient.medical_rec_no}`;
           detailsModal.classList.add('hidden');
         };
       };
