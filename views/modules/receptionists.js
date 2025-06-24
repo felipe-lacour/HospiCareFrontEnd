@@ -87,6 +87,7 @@ export async function afterRender() {
         // Render rows
         container.innerHTML = data.map(employee => rowTemplate(employee)).join('');
         bindEditButtons();
+        bindDeleteButtons()
 
         // Abrir modal nuevo
         openBtn.addEventListener('click', () => {
@@ -165,6 +166,7 @@ export async function afterRender() {
                 }
                 
                 bindEditButtons();
+                bindDeleteButtons()
                 form.removeAttribute('data-editing-id');
                 form.querySelector('[name="username"]')?.remove();
                 restoreHiddenFields();
@@ -238,6 +240,35 @@ export async function afterRender() {
                 form.querySelector('[name="username"]').value = employee.username;
                 });
             });
+        }
+
+        function bindDeleteButtons() {
+          document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', async (e) => {
+              const tr = e.currentTarget.closest('tr');
+              const employeeId = tr.id.split('-')[1];
+
+              if (!confirm('Are you sure you want to delete this employee?')) return;
+
+              const res = await fetch('http://localhost/HospiCareDev/BACKEND/public/employee/delete', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ employee_id: employeeId })
+              });
+
+              const result = await res.json();
+
+              if (res.ok) {
+                tr.remove();
+                showToast('Employee deleted successfully!');
+              } else {
+                alert('Error: ' + result.error);
+              }
+            });
+          });
         }
 
         function restoreHiddenFields() {

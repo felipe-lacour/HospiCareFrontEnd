@@ -5,8 +5,17 @@ export function render() {
     <div class="sm:flex-auto">
       <h1 class="text-base font-semibold text-gray-900">Doctors</h1>
     </div>
+
+    <div class="mt-4">
+      <label class="inline-flex items-center mb-5 cursor-pointer">
+        <input id="toggle-inactive" type="checkbox" class="sr-only peer">
+        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 dark:peer-focus:ring-sky-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-sky-600 dark:peer-checked:bg-sky-600"></div>
+        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Show inactive</span>
+      </label>
+    </div>
+            
     <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-      <button type="button" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Add user</button>
+      <button type="button" class="block rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-xs hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">Add user</button>
     </div>
   </div>
   <div class="mt-8 flow-root">
@@ -55,12 +64,23 @@ export function render() {
 
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" id="cancel-doctor" class="px-4 py-2 bg-gray-300 text-gray-800 rounded">Cancel</button>
-        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">Save</button>
+        <button type="submit" class="px-4 py-2 bg-sky-600 text-white rounded">Save</button>
       </div>
     </form>
   </div>
 </div>
 
+<!-- Confirmación de eliminación -->
+<div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-30 hidden flex justify-center items-center z-50">
+  <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+    <h2 class="text-lg font-semibold mb-4">Confirm Deactivation</h2>
+    <p class="text-sm text-gray-600 mb-6">Are you sure you want to deactivate this doctor?</p>
+    <div class="flex justify-end gap-2">
+      <button id="cancel-deactivate" class="px-4 py-2 bg-gray-300 text-gray-800 rounded">Cancel</button>
+      <button id="confirm-deactivate" class="px-4 py-2 bg-red-600 text-white rounded">Deactivate</button>
+    </div>
+  </div>
+</div>
   `;
 }
 
@@ -73,23 +93,31 @@ export async function afterRender() {
       }
     });
 
+    let currentDoctorData = null; 
+    let showInactive = false;
+    let allDoctors = [];  
+
     const data = await res.json();
     const container = document.getElementById('doctors-list');
     const modal = document.getElementById('doctor-modal');
     const form = document.getElementById('doctor-form');
-    const openBtn = document.querySelector('button.bg-indigo-600');
+    const openBtn = document.querySelector('button.bg-sky-600');
     const cancelBtn = document.getElementById('cancel-doctor');
     const optionalInEditMode = ['dni', 'birth_date'];
-    let currentDoctorData = null; 
 
     if (!res.ok) {
       container.innerHTML = `<p class="text-red-500">Error: ${data.error}</p>`;
       return;
     }
 
+    document.getElementById('toggle-inactive').addEventListener('change', e => {
+      showInactive = e.target.checked;
+      renderDoctorsList();
+    });
+
     // Render rows
-    container.innerHTML = data.map(doctor => rowTemplate(doctor)).join('');
-    bindEditButtons();
+    allDoctors = data;
+    renderDoctorsList();
 
     // Abrir modal nuevo
     openBtn.addEventListener('click', () => {
@@ -183,19 +211,68 @@ export async function afterRender() {
       }
     });
 
+    function renderDoctorsList() {
+      const container = document.getElementById('doctors-list');
+      container.innerHTML = '';
+
+      const filtered = showInactive ? allDoctors : allDoctors.filter(d => Boolean(d.employed));
+      if (filtered.length === 0) {
+        container.innerHTML = `<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">No doctors to display</td></tr>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(d => rowTemplate(d)).join('');
+      bindEditButtons();
+      bindDeleteButtons();
+    }
+
+    function bindDeleteButtons() {
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const doctorId = e.currentTarget.closest('tr').id.split('-')[1];
+          showConfirmModal(doctorId);
+        });
+      });
+
+      document.querySelectorAll('.reactivate-btn').forEach(btn => {
+        btn.addEventListener('click', async e => {
+          const doctorId = e.currentTarget.closest('tr').id.split('-')[1];
+          await toggleEmployment(doctorId, true);
+        });
+      });
+    }
+
+    function showConfirmModal(doctorId) {
+      const modal = document.getElementById('confirm-modal');
+      modal.classList.remove('hidden');
+
+      document.getElementById('cancel-deactivate').onclick = () => {
+        modal.classList.add('hidden');
+      };
+
+      document.getElementById('confirm-deactivate').onclick = async () => {
+        await toggleEmployment(doctorId, false);
+        modal.classList.add('hidden');
+      };
+    }
+
     function rowTemplate(doctor) {
+      const actionButton = doctor.employed
+        ? `<button class="delete-btn"><img src="../../img/archive.svg" alt="Delete" class="h-5" /><span class="sr-only">Delete</span></button>`
+        : `<button class="reactivate-btn"><img src="../../img/unarchive.svg" alt="Reactivate" class="h-5" /><span class="sr-only">Reactivate</span></button>`;
+
       return `
-        <tr id="doctor-${doctor.doctor_id}" class="hover:bg-gray-50">
-          <td class="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-6">${doctor.first_name} ${doctor.last_name}</td>
-          <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${doctor.license_no}</td>
-          <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${doctor.birth_date || '-'}</td>
-          <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${doctor.email}</td>
-          <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${doctor.specialty}</td>
-          <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${doctor.phone}</td>
-          <td class="relative py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-6">
+        <tr id="doctor-${doctor.doctor_id}" class="hover:bg-gray-50 ${doctor.employed ? '' : 'opacity-60'}">
+          <td class="py-4 pr-3 pl-4 text-sm font-medium text-gray-900 sm:pl-6">${doctor.first_name} ${doctor.last_name}</td>
+          <td class="px-3 py-4 text-sm text-gray-500">${doctor.license_no}</td>
+          <td class="px-3 py-4 text-sm text-gray-500">${doctor.birth_date || '-'}</td>
+          <td class="px-3 py-4 text-sm text-gray-500">${doctor.email}</td>
+          <td class="px-3 py-4 text-sm text-gray-500">${doctor.specialty}</td>
+          <td class="px-3 py-4 text-sm text-gray-500">${doctor.phone}</td>
+          <td class="relative py-4 pr-4 pl-3 text-right text-sm font-medium sm:pr-6">
             <div class="flex justify-end gap-3">
-              <button class="edit-btn"><img src="../../img/edit.svg" alt="Edit" class="h-5" /><span class="sr-only">Edit</span></button>
-              <button class="delete-btn"><img src="../../img/trash.svg" alt="Delete" class="h-5" /><span class="sr-only">Delete</span></button>
+              ${doctor.employed ? '<button class="edit-btn"><img src="../../img/edit.svg" alt="Edit" class="h-5" /></button>' : ''}
+              ${actionButton}
             </div>
           </td>
         </tr>
@@ -266,7 +343,7 @@ export async function afterRender() {
           <div class="bg-white rounded p-6 shadow-lg max-w-md w-full text-center">
             <h2 class="text-lg font-semibold mb-2">Setup Link</h2>
             <input type="text" id="linkInput" value="${link}" readonly class="w-full border p-2 rounded mb-4 text-sm text-gray-700">
-            <button id="copyLink" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500">Copy</button>
+            <button id="copyLink" class="bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-500">Copy</button>
             <button id="closeLinkModal" class="ml-2 text-gray-500 hover:underline">Close</button>
           </div>
         </div>`;
@@ -305,6 +382,31 @@ export async function afterRender() {
       setTimeout(() => {
         toast.remove();
       }, 3000);
+    }
+
+    async function toggleEmployment(doctorId, employed) {
+      try {
+        const res = await fetch(`http://localhost/HospiCareDev/BACKEND/public/doctors/employment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ doctor_id: doctorId, employed })
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Failed to update employment status');
+
+        const index = allDoctors.findIndex(d => d.doctor_id == doctorId);
+        if (index !== -1) {
+          allDoctors[index].employed = employed;
+          renderDoctorsList();
+          showToast(`Doctor ${employed ? 'reactivated' : 'deactivated'} successfully`);
+        }
+      } catch (err) {
+        showToast(err.message || 'Error updating status');
+      }
     }
 
   } catch (err) {
