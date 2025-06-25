@@ -63,6 +63,17 @@ export async function afterRender() {
   const token = localStorage.getItem('token');
   const headers = { 'Authorization': `Bearer ${token}` };
 
+  // 🔽 Read the current user and determine if they are a doctor
+  const user = JSON.parse(localStorage.getItem('user')) || {};
+  const isDoctor = user.role_id === 2;
+  const doctorId = user.user_id;
+
+  // If it’s a doctor, hide the Add button
+  const addBtn = document.getElementById('add-appointment');
+  if (isDoctor) {
+    addBtn.classList.add('hidden');
+  }
+
   // Caches for names
   const doctorMap  = new Map();
   const patientMap = new Map();
@@ -85,32 +96,44 @@ export async function afterRender() {
     return name;
   }
 
-  let apptMap = {}; // date → [ {id,time,doctor,patient}, … ]
+  let apptMap = {};
 
-  // 1) Load & render calendar grid
   async function loadCalendar() {
     apptMap = {};
-    const res = await fetch(`${API_BASE}/appointments`, { headers });
-    const appointments = await res.json();
-    if (!res.ok || !Array.isArray(appointments)) {
+    const resAll = await fetch(`${API_BASE}/appointments`, { headers });
+    const allAppts = await resAll.json();
+    if (!resAll.ok || !Array.isArray(allAppts)) {
       calendarContainer.innerHTML = `<p class="text-red-500">Error loading appointments</p>`;
       return;
     }
 
-    // Build map
+    // 🔽 Filter for doctors
+
+    console.log('logged-in user:', user);
+console.log('all fetched appts:', allAppts);
+    const appointments = isDoctor
+      ? allAppts.filter(a => a.doctor_id == doctorId)
+      : allAppts;
+
     await Promise.all(appointments.map(async appt => {
       if (!appt.datetime) return;
       const [date, time] = appt.datetime.split(' ');
       const doctor  = await fetchDoctorName(appt.doctor_id);
       const patient = await fetchPatientName(appt.patient_id);
       apptMap[date] = apptMap[date] || [];
-      apptMap[date].push({ id: appt.appointment_id, time, doctor, patient, status: appt.status });
+      apptMap[date].push({
+        id:       appt.appointment_id,
+        time,
+        doctor,
+        patient,
+        status:   appt.status
+      });
     }));
 
-    // Render grid
-    const today = new Date();
-    const year  = today.getFullYear();
-    const month = today.getMonth();
+    // … render grid exactly as before …
+    const today    = new Date();
+    const year     = today.getFullYear();
+    const month    = today.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     let dayCounter = 1 - ((firstDay + 6) % 7);
     const rows = [];
@@ -118,15 +141,17 @@ export async function afterRender() {
     for (let w = 0; w < 6; w++) {
       let row = '';
       for (let i = 0; i < 7; i++, dayCounter++) {
-        const d    = new Date(year, month, dayCounter);
-        const iso  = d.toISOString().split('T')[0];
+        const d      = new Date(year, month, dayCounter);
+        const iso    = d.toISOString().slice(0, 10);
         const isCurr = d.getMonth() === month;
-        const list = apptMap[iso] || [];
+        const list   = apptMap[iso] || [];
         row += `
-          <div class="relative px-2 py-2 ${isCurr?'bg-white':'bg-gray-50 text-gray-400'} min-h-[4rem] border border-gray-200 overflow-y-auto">
+          <div class="relative px-2 py-2 ${isCurr?'bg-white':'bg-gray-50 text-gray-400'} min-h-[4rem]
+                      border border-gray-200 overflow-y-auto">
             <time datetime="${iso}" class="text-xs font-semibold block">${d.getDate()}</time>
-            ${list.length>0?`
-              <div class="mt-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-medium rounded px-2 py-1 text-center cursor-pointer"
+            ${list.length>0 ? `
+              <div class="mt-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-medium
+                          rounded px-2 py-1 text-center cursor-pointer"
                    onclick="showAppointments('${iso}')">
                 ${list.length} appointment${list.length>1?'s':''}
               </div>` : ''}
@@ -149,66 +174,31 @@ export async function afterRender() {
     `;
   }
 
-  // 2) Show & manage modal list, with delete + re-render
   window.showAppointments = async (date) => {
     const list = document.getElementById('modal-appointments');
-    const items = (apptMap[date]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
-
-    console.log(`Showing appointments for ${date}:`, items);
+    const items = (apptMap[date] || []).slice().sort((a,b)=>a.time.localeCompare(b.time));
 
     list.innerHTML = items.map(a => `
-<li class="flex items-center justify-between py-3 px-4 border-b hover:bg-gray-50 transition-colors">
-  <!-- Left: Time + Details -->
-  <div class="flex items-center space-x-4">
-    <!-- Status Dot -->
-    <span class="w-2 h-2 rounded-full" 
-          :class="{
-            'bg-green-500': a.status === 'CONFIRMADA',
-            'bg-yellow-500': a.status === 'PENDIENTE',
-            'bg-red-500': a.status === 'CANCELADA'
-          }">
-    </span>
-
-    <div>
-      <p class="text-sm font-semibold">${a.time}</p>
-      <p class="text-xs text-gray-600">
-        Dr. ${a.doctor} → ${a.patient}
-      </p>
-    </div>
-  </div>
-
-  <!-- Right: Status badge + actions -->
-  <div class="flex items-center space-x-2">
-    <!-- Status badge -->
-    <span class="px-2 py-0.5 text-xs font-medium rounded-full 
-      ${
-        a.status === 'CONFIRMADA'
-          ? 'bg-green-100 text-green-800'
-        : a.status === 'PENDIENTE'
-          ? 'bg-yellow-100 text-yellow-800'
-        : 'bg-red-100 text-red-800'
-      }
-    ">
-      ${a.status}
-    </span>
-
-    <!-- Change Status -->
-    <button 
-      class="change-status-btn px-2 py-1 text-xs font-medium border rounded hover:bg-gray-100"
-      data-id="${a.id}"
-    >
-      Change
-    </button>
-
-    <!-- Delete -->
-    <button 
-      class="delete-appt-btn p-1 rounded-full hover:bg-red-100 transition-colors"
-      data-id="${a.id}" title="Delete"
-    >
-      <img src="../../img/trash.svg" alt="Delete" class="w-5 h-5"/>
-    </button>
-  </div>
-</li>
+      <li class="flex items-center justify-between py-3 px-4 border-b hover:bg-gray-50 transition">
+        <div class="flex items-center space-x-4">
+          <span class="w-2 h-2 rounded-full 
+            ${a.status==='CONFIRMADA'?'bg-green-500':a.status==='PENDIENTE'?'bg-yellow-500':'bg-red-500'}"></span>
+          <div>
+            <p class="text-sm font-semibold">${a.time}</p>
+            <p class="text-xs text-gray-600">Dr. ${a.doctor} → ${a.patient}</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="px-2 py-0.5 text-xs font-medium rounded-full 
+            ${a.status==='CONFIRMADA'?'bg-green-100 text-green-800'
+              :a.status==='PENDIENTE'?'bg-yellow-100 text-yellow-800':'bg-red-100 text-red-800'}">
+            ${a.status}
+          </span>
+          <button class="delete-appt-btn p-1 rounded-full hover:bg-red-100" data-id="${a.id}" title="Delete">
+            <img src="../../img/trash.svg" alt="Delete" class="w-5 h-5"/>
+          </button>
+        </div>
+      </li>
     `).join('');
 
     list.querySelectorAll('.delete-appt-btn').forEach(btn => {
@@ -216,20 +206,11 @@ export async function afterRender() {
         e.stopPropagation();
         if (!confirm('Delete this appointment?')) return;
         const id = btn.dataset.id;
-
         const res = await fetch(`${API_BASE}/appointments/delete?id=${id}`, {
-          method: 'GET',
-          headers
+          method: 'GET', headers
         });
-
         if (res.ok) {
-          alert('Appointment deleted successfully!');
-          // 1) close the modal
-          const modal = document.getElementById('appointment-modal');
-          modal.classList.add('hidden');
-          modal.classList.remove('flex');
-
-          // 2) refresh the calendar grid
+          document.getElementById('appointment-modal').classList.replace('flex','hidden');
           await loadCalendar();
         } else {
           const err = await res.json();
@@ -238,81 +219,59 @@ export async function afterRender() {
       };
     });
 
-    const modal = document.getElementById('appointment-modal');
-    modal.classList.replace('hidden','flex');
+    document.getElementById('appointment-modal').classList.replace('hidden','flex');
   };
 
   document.getElementById('close-modal').onclick = () => {
-    const m = document.getElementById('appointment-modal');
-    m.classList.add('hidden'); m.classList.remove('flex');
+    document.getElementById('appointment-modal').classList.replace('flex','hidden');
   };
 
-  // 3) Add-Appointment modal setup
-  async function setupAddModal() {
-    const addBtn  = document.getElementById('add-appointment');
-    const addModal = document.getElementById('add-appointment-modal');
-    const closeAdd = document.getElementById('close-add-modal');
-    const form    = document.getElementById('add-appointment-form');
+  // Only non-doctors get the add-appointment modal
+  if (!isDoctor) {
+    async function setupAddModal() {
+      const addModal = document.getElementById('add-appointment-modal');
+      const closeAdd = document.getElementById('close-add-modal');
+      const form     = document.getElementById('add-appointment-form');
+      const [docs, pats] = await Promise.all([
+        fetch(`${API_BASE}/doctors`,  { headers }).then(r=>r.json()),
+        fetch(`${API_BASE}/patients`, { headers }).then(r=>r.json())
+      ]);
+      const drSel = form.elements['doctor_id'];
+      const ptSel = form.elements['patient_id'];
+      docs.forEach(d => drSel.append(new Option(`${d.first_name} ${d.last_name}`, d.doctor_id)));
+      pats.forEach(p => ptSel.append(new Option(`${p.first_name} ${p.last_name}`, p.person_id)));
 
-    // Pre-fetch doctor & patient lists
-    const [docs, pats] = await Promise.all([
-      fetch(`${API_BASE}/doctors`,  { headers }).then(r=>r.json()),
-      fetch(`${API_BASE}/patients`, { headers }).then(r=>r.json())
-    ]);
-
-    const drSel = form.elements['doctor_id'];
-    const ptSel = form.elements['patient_id'];
-
-    docs.forEach(d => {
-      const o = document.createElement('option');
-      o.value = d.doctor_id; o.textContent = `${d.first_name} ${d.last_name}`;
-      drSel.appendChild(o);
-    });
-    pats.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p.person_id; o.textContent = `${p.first_name} ${p.last_name}`;
-      ptSel.appendChild(o);
-    });
-
-    addBtn.onclick = () => {
-      form.reset();
-      addModal.classList.replace('hidden','flex');
-    };
-    closeAdd.onclick = () => {
-      addModal.classList.replace('flex','hidden');
-    };
-
-    form.onsubmit = async e => {
-      e.preventDefault();
-      const fd = new FormData(form);
-      const datetime = `${fd.get('date')} ${fd.get('time')}`;
-      const body = {
-        datetime,
-        doctor_id:  fd.get('doctor_id'),
-        patient_id: fd.get('patient_id')
+      document.getElementById('add-appointment').onclick = () => {
+        form.reset();
+        addModal.classList.replace('hidden','flex');
       };
+      closeAdd.onclick = () => addModal.classList.replace('flex','hidden');
 
-      const res = await fetch(`${API_BASE}/appointments/store`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (res.ok) {
-        alert('Appointment added successfully!');
-        addModal.classList.replace('flex','hidden');
-        await loadCalendar(); // refresh calendar after add
-      } else {
-        const err = await res.json();
-        alert(`Add failed: ${err.error||res.statusText}`);
-      }
-    };
+      form.onsubmit = async e => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const body = {
+          datetime:  `${fd.get('date')} ${fd.get('time')}`,
+          doctor_id: fd.get('doctor_id'),
+          patient_id: fd.get('patient_id')
+        };
+        const res = await fetch(`${API_BASE}/appointments/store`, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', ...headers },
+          body: JSON.stringify(body)
+        });
+        if (res.ok) {
+          addModal.classList.replace('flex','hidden');
+          await loadCalendar();
+        } else {
+          const err = await res.json();
+          alert(`Add failed: ${err.error||res.statusText}`);
+        }
+      };
+    }
+    await setupAddModal();
   }
 
-  // initial boot
+  // Finally, render the calendar
   await loadCalendar();
-  await setupAddModal();
 }
