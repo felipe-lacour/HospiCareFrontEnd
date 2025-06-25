@@ -1,4 +1,5 @@
 export function renderLayout() {
+  const user = JSON.parse(localStorage.getItem('user'));
   document.getElementById('layout').innerHTML = `<div>
 
   <div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
@@ -28,18 +29,22 @@ export function renderLayout() {
                   Appointments
                 </a>
               </li>
+              ${user.role_id === 2 || user.role_id === 3 ? '' : `
               <li>
                 <a href="#receptionists" class="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold text-gray-400 hover:bg-blue-950 hover:text-white">
                   <img src="../img/staff.svg" class="h-6 w-6" alt="Staff"/>
                   Staff
                 </a>
               </li>
+              `}
+              ${user.role_id === 2 ? '' : `
               <li>
                 <a href="#doctors" class="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold text-gray-400 hover:bg-blue-950 hover:text-white">
                   <img src="../img/corss.svg" class="h-6 w-6" alt="Home"/>
                   Doctors
                 </a>
               </li>
+              `}
             </ul>
           </li>
         </ul>
@@ -92,7 +97,6 @@ export function renderLayout() {
 
   // Mostrar username
   const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user'));
   if (user) {
     document.getElementById('username-display').textContent = user.username;
   }
