@@ -37,8 +37,6 @@ export async function afterRender() {
     employeeId = user.user_id;
   }
 
-
-  // Cargar datos actuales
   try {
     const res = await fetch(`http://localhost/HospiCareDev/BACKEND/public/employee/show?id=${employeeId}`, {
       headers: {
@@ -58,7 +56,6 @@ export async function afterRender() {
     alert('Connection error');
   }
 
-  // 🔄 Guardar cambios generales
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(form).entries());
@@ -87,7 +84,6 @@ export async function afterRender() {
     }
   });
 
-  // 🔒 Cambiar contraseña
   passForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const passData = Object.fromEntries(new FormData(passForm).entries());

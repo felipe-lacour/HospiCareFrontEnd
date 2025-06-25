@@ -17,12 +17,10 @@ export async function render(mrn) {
 
   console.log(data)
 
-  // guard against missing notes
   const notesArray = Array.isArray(data.consult_notes)
     ? data.consult_notes
     : [];
 
-  // fetch doctor names
   const notesWithDoctors = await Promise.all(
     notesArray.map(async (note) => {
       const docRes = await fetch(
@@ -141,7 +139,6 @@ export async function afterRender(mrn) {
   const user  = JSON.parse(localStorage.getItem('user'));
   const headers = { Authorization: `Bearer ${token}` };
 
-  // only wire up the modal and form if they're present
   const modal = document.getElementById('note-modal');
   const form  = document.getElementById('note-form');
   if (modal && form) {
@@ -149,9 +146,7 @@ export async function afterRender(mrn) {
     const openBtn       = document.querySelector('button.bg-sky-800');
     const doctorSelect  = form.elements['doctor_id'];
 
-    // 🩺 If current user is a doctor, show only their own name & disable the select
     if (user.role_id === 2) {
-      // fetch this doctor’s details
       const docRes = await fetch(
         `${API_BASE}/doctors/show?id=${user.employee_id}`,
         { headers }
@@ -164,7 +159,6 @@ export async function afterRender(mrn) {
       doctorSelect.disabled = true;
       doctorSelect.classList.add('bg-gray-100', 'cursor-not-allowed');
     } else {
-      // 👩‍⚕️ Admin: populate full dropdown
       const resDoc = await fetch(`${API_BASE}/doctors`, { headers });
       const doctors = await resDoc.json();
       doctors.forEach(d => {
@@ -175,11 +169,9 @@ export async function afterRender(mrn) {
       });
     }
 
-    // show/hide modal
     openBtn.onclick  = () => { form.reset(); modal.classList.remove('hidden'); };
     closeBtn.onclick = () => modal.classList.add('hidden');
 
-    // submit new note
     form.onsubmit = async e => {
       e.preventDefault();
       const fd = new FormData(form);
@@ -210,7 +202,6 @@ export async function afterRender(mrn) {
     };
   }
 
-  // hook up delete buttons
   document.querySelectorAll('.delete-note-btn').forEach(btn => {
     btn.onclick = async e => {
       e.stopPropagation();

@@ -63,18 +63,15 @@ export async function afterRender() {
   const token = localStorage.getItem('token');
   const headers = { 'Authorization': `Bearer ${token}` };
 
-  // 🔽 Read the current user and determine if they are a doctor
   const user = JSON.parse(localStorage.getItem('user')) || {};
   const isDoctor = user.role_id === 2;
   const doctorId = user.user_id;
 
-  // If it’s a doctor, hide the Add button
   const addBtn = document.getElementById('add-appointment');
   if (isDoctor) {
     addBtn.classList.add('hidden');
   }
 
-  // Caches for names
   const doctorMap  = new Map();
   const patientMap = new Map();
 
@@ -107,7 +104,6 @@ export async function afterRender() {
       return;
     }
 
-    // 🔽 Filter for doctors
 
     console.log('logged-in user:', user);
 console.log('all fetched appts:', allAppts);
@@ -130,7 +126,6 @@ console.log('all fetched appts:', allAppts);
       });
     }));
 
-    // … render grid exactly as before …
     const today    = new Date();
     const year     = today.getFullYear();
     const month    = today.getMonth();
@@ -226,7 +221,6 @@ console.log('all fetched appts:', allAppts);
     document.getElementById('appointment-modal').classList.replace('flex','hidden');
   };
 
-  // Only non-doctors get the add-appointment modal
   if (!isDoctor) {
     async function setupAddModal() {
       const addModal = document.getElementById('add-appointment-modal');
@@ -282,6 +276,5 @@ console.log('all fetched appts:', allAppts);
     await setupAddModal();
   }
 
-  // Finally, render the calendar
   await loadCalendar();
 }

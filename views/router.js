@@ -14,7 +14,6 @@ export async function router() {
     return;
   }
 
-  // LOGIN
   if (route === 'login') {
     layoutRoot.innerHTML = '';
     const module = await import(`./modules/login.js`);
@@ -24,17 +23,15 @@ export async function router() {
     return;
   }
 
-  // SET PASSWORD
   if (rawRoute === 'auth/set-password') {
     layoutRoot.innerHTML = '';
     const module = await import(`./modules/setup.js`);
-    const html = await module.render(queryString); // le pasamos el query
+    const html = await module.render(queryString); 
     layoutRoot.innerHTML = html;
     if (module.afterRender) module.afterRender(queryString);
     return;
   }
 
-  // REDIRECCIÓN SI NO HAY TOKEN
   if (!token) {
     location.hash = 'login';
     return;
@@ -54,7 +51,6 @@ export async function router() {
     return;
   }
 
-  // USUARIO AUTENTICADO
   renderLayout();
   const app = document.getElementById('app');
   if (!app) {

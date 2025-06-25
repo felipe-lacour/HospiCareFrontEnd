@@ -95,13 +95,11 @@ export function renderLayout() {
   </div>
 </div>`;
 
-  // Mostrar username
   const token = localStorage.getItem('token');
   if (user) {
     document.getElementById('username-display').textContent = user.username;
   }
 
-  // Logout
   document.getElementById('logout').addEventListener('click', async () => {
 
     try {
@@ -120,7 +118,6 @@ export function renderLayout() {
     location.hash = 'login';
   });
 
-  // Toggle del menú de usuario
   const userBtn = document.getElementById('user-menu-button');
   const dropdown = document.getElementById('user-dropdown');
 
@@ -128,7 +125,6 @@ export function renderLayout() {
     dropdown.classList.toggle('hidden');
   });
 
-  // Ocultar dropdown si se hace clic fuera
   document.addEventListener('click', (e) => {
     const isInsideMenu = userBtn.contains(e.target) || dropdown.contains(e.target);
     if (!isInsideMenu) {

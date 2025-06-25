@@ -197,9 +197,9 @@ export async function afterRender() {
       blood_type:  fd.get('blood_type')
     };
 
-      const nameRegex = /^[A-Za-zÀ-ÿ\s'-]+$/;      // Allows letters, spaces, accents, apostrophes, hyphens
+      const nameRegex = /^[A-Za-zÀ-ÿ\s'-]+$/;
   const dniRegex = /^\d+$/;
-  const phoneRegex = /^[\d\s()+-]+$/;          // Optional, allows numbers, spaces, ()+-
+  const phoneRegex = /^[\d\s()+-]+$/;
 
   if (!dniRegex.test(body.dni)) {
     alert("DNI must contain only numbers.");

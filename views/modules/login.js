@@ -62,11 +62,9 @@ export function afterRender() {
         return;
       }
 
-      // ✅ Guardar token y usuario
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      // ✅ Ir a dashboard
       location.hash = 'dashboard';
 
     } catch (err) {

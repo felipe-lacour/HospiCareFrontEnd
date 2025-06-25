@@ -122,17 +122,14 @@ export async function afterRender() {
       renderDoctorsList();
     });
 
-    // Render rows
     allDoctors = data;
     renderDoctorsList();
 
-    // Abrir modal nuevo
     openBtn.addEventListener('click', () => {
       form.reset();
       modal.classList.remove('hidden');
     });
 
-    // Cancelar
     cancelBtn.addEventListener('click', () => {
       modal.classList.add('hidden');
       form.reset();
@@ -142,7 +139,6 @@ export async function afterRender() {
       currentDoctorData = null; 
     });
 
-    // Enviar formulario
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const isEditing = form.hasAttribute('data-editing-id');
@@ -156,11 +152,11 @@ export async function afterRender() {
         first_name: /^[A-Za-zÀ-ÿ\s]+$/,
         last_name: /^[A-Za-zÀ-ÿ\s]+$/,
         dni: /^\d+$/,
-        birth_date: /^\d{4}-\d{2}-\d{2}$/, // formato YYYY-MM-DD
-        address: /^[A-Za-zÀ-ÿ0-9\s,.#-]+$/, // texto + números comunes
-        phone: /^\d{6,15}$/, // asumimos mínimo 6, máx 15 dígitos
-        email: /^[^@]+@[^@]+\.[^@]+$/, // aunque ya lo valida HTML
-        license_no: /^[A-Za-z0-9-]+$/, // alfanumérico común
+        birth_date: /^\d{4}-\d{2}-\d{2}$/,
+        address: /^[A-Za-zÀ-ÿ0-9\s,.#-]+$/,
+        phone: /^\d{6,15}$/,
+        email: /^[^@]+@[^@]+\.[^@]+$/,
+        license_no: /^[A-Za-z0-9-]+$/,
         specialty: /^[A-Za-zÀ-ÿ\s]+$/
       };
 
@@ -394,11 +390,9 @@ export async function afterRender() {
     }
 
     function showToast(message) {
-      // Remove existing toast if any
       const existingToast = document.getElementById('toast-simple');
       if (existingToast) existingToast.remove();
 
-      // Create toast
       const toast = document.createElement('div');
       toast.id = 'toast-simple';
       toast.className = 'fixed bottom-6 left-1/2 transform -translate-x-1/2 flex items-center w-full max-w-xs p-4 space-x-4 rtl:space-x-reverse text-gray-600 bg-gray-50 divide-x rtl:divide-x-reverse divide-gray-200 rounded-lg shadow-lg dark:text-gray-400 dark:divide-gray-700 dark:bg-gray-800';
@@ -408,7 +402,6 @@ export async function afterRender() {
 
       document.body.appendChild(toast);
 
-      // Auto-hide after 3 seconds
       setTimeout(() => {
         toast.remove();
       }, 3000);
