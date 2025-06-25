@@ -78,6 +78,7 @@ export function render() {
 }
 
 export async function afterRender() {
+    const user = JSON.parse(localStorage.getItem('user'));
   const token = localStorage.getItem('token');
   let editingPatientId = null;
 
@@ -136,8 +137,8 @@ export async function afterRender() {
         <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${p.medical_rec_no}</td>
         <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">${p.blood_type}</td>
         <td class="relative py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-6">
-          <button class="edit-btn" data-id="${p.person_id}"><img src="../../img/edit.svg" alt="Edit" class="h-5" /><span class="sr-only">Edit ${p.first_name} ${p.last_name}</span></button>
-          <button class="delete-btn" data-id="${p.person_id}"><img src="../../img/trash.svg" alt="Delete" class="h-5" /><span class="sr-only">Delete ${p.first_name} ${p.last_name}</span></button>
+          <button class="edit-btn ${user.role_id === 1 || user.role_id === 3 ? '' : 'hidden'}" data-id="${p.person_id}"><img src="../../img/edit.svg" alt="Edit" class="h-5" /><span class="sr-only">Edit ${p.first_name} ${p.last_name}</span></button>
+          <button class="delete-btn ${user.role_id === 1 || user.role_id === 3 ? '' : 'hidden'}" data-id="${p.person_id}"><img src="../../img/trash.svg" alt="Delete" class="h-5" /><span class="sr-only">Delete ${p.first_name} ${p.last_name}</span></button>
         </td>
       </tr>
     `).join('');
