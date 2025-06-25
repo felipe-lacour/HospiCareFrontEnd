@@ -1,6 +1,6 @@
-export function render() {
-  const hashParams = new URLSearchParams(location.hash.split('?')[1]);
-  const token = hashParams.get('token');
+export function render(queryString) {
+  const params = new URLSearchParams(queryString);
+  const token = params.get('token');
 
   if (!token) {
     return `<div class="text-center mt-10 text-red-600">Invalid or missing token.</div>`;
@@ -13,7 +13,6 @@ export function render() {
         <input type="password" name="new_password" placeholder="New Password" class="w-full border p-2 rounded" required>
         <input type="password" name="confirm_password" placeholder="Confirm Password" class="w-full border p-2 rounded" required>
         <input type="hidden" name="token" value="${token}">
-
         <div class="text-right">
           <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500">Set Password</button>
         </div>

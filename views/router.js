@@ -1,17 +1,18 @@
 import { renderLayout } from './layout.js';
 
 export async function router() {
-  const [route, ...params] = location.hash.slice(1).split('/');
+  const hash = location.hash.slice(1);
+  const [rawRoute, queryString] = hash.split('?');
+  const [route, ...params] = rawRoute.split('/');
   const token = localStorage.getItem('token');
   const layoutRoot = document.getElementById('layout');
 
-  // 🛑 Verifica que exista el div con id="layout"
   if (!layoutRoot) {
     console.error('Missing #layout div in HTML');
     return;
   }
 
-  // 🟡 LOGIN — no se muestra layout si estás en login
+  // LOGIN
   if (route === 'login') {
     layoutRoot.innerHTML = '';
     const module = await import(`./modules/login.js`);
@@ -21,25 +22,24 @@ export async function router() {
     return;
   }
 
-  // 🔑 Password Setup — sin token requerido
-  if (route.startsWith('auth/set-password')) {
+  // SET PASSWORD
+  if (rawRoute === 'auth/set-password') {
     layoutRoot.innerHTML = '';
     const module = await import(`./modules/setup.js`);
-    const html = await module.render();
+    const html = await module.render(queryString); // ← le pasamos el query
     layoutRoot.innerHTML = html;
-    if (module.afterRender) module.afterRender();
+    if (module.afterRender) module.afterRender(queryString);
     return;
   }
 
-  // 🔒 If no token, force redirect to login
+  // REDIRECCIÓN SI NO HAY TOKEN
   if (!token) {
     location.hash = 'login';
     return;
   }
 
-  // ✅ Usuario autenticado: render layout y módulo
-  renderLayout(); // esto renderiza la sidebar + <main id="app">
-
+  // USUARIO AUTENTICADO
+  renderLayout();
   const app = document.getElementById('app');
   if (!app) {
     console.error('Missing #app inside layout');
@@ -48,7 +48,7 @@ export async function router() {
 
   try {
     const module = await import(`./modules/${route}.js`);
-    const html = await module.render(...params); // ← pasar parámetros como MRN
+    const html = await module.render(...params);
     app.innerHTML = html;
     if (module.afterRender) module.afterRender(...params);
   } catch (e) {
