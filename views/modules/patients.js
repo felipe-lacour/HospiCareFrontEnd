@@ -197,6 +197,39 @@ export async function afterRender() {
       blood_type:  fd.get('blood_type')
     };
 
+      const nameRegex = /^[A-Za-zÀ-ÿ\s'-]+$/;      // Allows letters, spaces, accents, apostrophes, hyphens
+  const dniRegex = /^\d+$/;
+  const phoneRegex = /^[\d\s()+-]+$/;          // Optional, allows numbers, spaces, ()+-
+
+  if (!dniRegex.test(body.dni)) {
+    alert("DNI must contain only numbers.");
+    return;
+  }
+  if (!nameRegex.test(body.first_name)) {
+    alert("First name must contain only letters and valid characters.");
+    return;
+  }
+  if (!nameRegex.test(body.last_name)) {
+    alert("Last name must contain only letters and valid characters.");
+    return;
+  }
+  if (!phoneRegex.test(body.phone)) {
+    alert("Phone number contains invalid characters.");
+    return;
+  }
+  if (!body.birth_date) {
+    alert("Please enter a valid birth date.");
+    return;
+  }
+  if (!body.address) {
+    alert("Address cannot be empty.");
+    return;
+  }
+  if (!body.blood_type) {
+    alert("Please select a blood type.");
+    return;
+  }
+
     const url    = editingPatientId
                    ? `http://localhost/HospiCareDev/BACKEND/public/patients/update?id=${editingPatientId}`
                    : 'http://localhost/HospiCareDev/BACKEND/public/patients/store';
