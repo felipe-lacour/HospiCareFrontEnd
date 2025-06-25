@@ -238,7 +238,17 @@ console.log('all fetched appts:', allAppts);
       ]);
       const drSel = form.elements['doctor_id'];
       const ptSel = form.elements['patient_id'];
-      docs.forEach(d => drSel.append(new Option(`${d.first_name} ${d.last_name}`, d.doctor_id)));
+      docs.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value       = d.doctor_id;
+        opt.textContent = `${d.first_name} ${d.last_name}`;
+        if (!d.employed) {
+          opt.disabled        = true;
+          opt.textContent    += ' (inactive)';
+          opt.classList.add('text-gray-400');
+        }
+        drSel.appendChild(opt);
+      });
       pats.forEach(p => ptSel.append(new Option(`${p.first_name} ${p.last_name}`, p.person_id)));
 
       document.getElementById('add-appointment').onclick = () => {
