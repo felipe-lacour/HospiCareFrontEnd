@@ -104,7 +104,7 @@ export async function afterRender() {
       const doctor  = await fetchDoctorName(appt.doctor_id);
       const patient = await fetchPatientName(appt.patient_id);
       apptMap[date] = apptMap[date] || [];
-      apptMap[date].push({ id: appt.appointment_id, time, doctor, patient });
+      apptMap[date].push({ id: appt.appointment_id, time, doctor, patient, status: appt.status });
     }));
 
     // Render grid
@@ -154,13 +154,61 @@ export async function afterRender() {
     const list = document.getElementById('modal-appointments');
     const items = (apptMap[date]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
 
+    console.log(`Showing appointments for ${date}:`, items);
+
     list.innerHTML = items.map(a => `
-      <li class="flex items-center justify-between border-b p-2">
-        <div>🕒 ${a.time} — <strong>Dr. ${a.doctor}</strong> → ${a.patient}</div>
-        <button class="delete-appt-btn p-1 rounded hover:bg-red-100" data-id="${a.id}" title="Delete">
-          🗑️
-        </button>
-      </li>
+<li class="flex items-center justify-between py-3 px-4 border-b hover:bg-gray-50 transition-colors">
+  <!-- Left: Time + Details -->
+  <div class="flex items-center space-x-4">
+    <!-- Status Dot -->
+    <span class="w-2 h-2 rounded-full" 
+          :class="{
+            'bg-green-500': a.status === 'CONFIRMADA',
+            'bg-yellow-500': a.status === 'PENDIENTE',
+            'bg-red-500': a.status === 'CANCELADA'
+          }">
+    </span>
+
+    <div>
+      <p class="text-sm font-semibold">${a.time}</p>
+      <p class="text-xs text-gray-600">
+        Dr. ${a.doctor} → ${a.patient}
+      </p>
+    </div>
+  </div>
+
+  <!-- Right: Status badge + actions -->
+  <div class="flex items-center space-x-2">
+    <!-- Status badge -->
+    <span class="px-2 py-0.5 text-xs font-medium rounded-full 
+      ${
+        a.status === 'CONFIRMADA'
+          ? 'bg-green-100 text-green-800'
+        : a.status === 'PENDIENTE'
+          ? 'bg-yellow-100 text-yellow-800'
+        : 'bg-red-100 text-red-800'
+      }
+    ">
+      ${a.status}
+    </span>
+
+    <!-- Change Status -->
+    <button 
+      class="change-status-btn px-2 py-1 text-xs font-medium border rounded hover:bg-gray-100"
+      data-id="${a.id}"
+    >
+      Change
+    </button>
+
+    <!-- Delete -->
+    <button 
+      class="delete-appt-btn p-1 rounded-full hover:bg-red-100 transition-colors"
+      data-id="${a.id}" title="Delete"
+    >
+      <img src="../../img/trash.svg" alt="Delete" class="w-5 h-5"/>
+    </button>
+  </div>
+</li>
     `).join('');
 
     list.querySelectorAll('.delete-appt-btn').forEach(btn => {
