@@ -99,7 +99,7 @@ export function renderLayout() {
             </button>
 
             <div class="hidden absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-hidden" role="menu" id="user-dropdown" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
-              <a href="#" class="block px-3 py-1 text-sm/6 text-gray-900" role="menuitem" tabindex="-1">Your profile</a>
+              <a href="#settings" class="block px-3 py-1 text-sm/6 text-gray-900" role="menuitem" tabindex="-1">Settings</a>
               <a href="#" id="logout" class="block px-3 py-1 text-sm/6 text-gray-900" role="menuitem" tabindex="-1">Sign out</a>
             </div>
           </div>
@@ -116,13 +116,26 @@ export function renderLayout() {
 </div>`;
 
   // Mostrar username
+  const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user'));
   if (user) {
     document.getElementById('username-display').textContent = user.username;
   }
 
   // Logout
-  document.getElementById('logout').addEventListener('click', () => {
+  document.getElementById('logout').addEventListener('click', async () => {
+
+    try {
+      await fetch('http://localhost/HospiCareDev/BACKEND/public/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     location.hash = 'login';
