@@ -1,6 +1,8 @@
 import { renderLayout } from './layout.js';
 
 export async function router() {
+  const adminOnlyRoutes = ['receptionists'];
+  const doctorRestrictedRoutes = ['doctors'];
   const hash = location.hash.slice(1);
   const [rawRoute, queryString] = hash.split('?');
   const [route, ...params] = rawRoute.split('/');
@@ -26,7 +28,7 @@ export async function router() {
   if (rawRoute === 'auth/set-password') {
     layoutRoot.innerHTML = '';
     const module = await import(`./modules/setup.js`);
-    const html = await module.render(queryString); // ← le pasamos el query
+    const html = await module.render(queryString); // le pasamos el query
     layoutRoot.innerHTML = html;
     if (module.afterRender) module.afterRender(queryString);
     return;
@@ -35,6 +37,20 @@ export async function router() {
   // REDIRECCIÓN SI NO HAY TOKEN
   if (!token) {
     location.hash = 'login';
+    return;
+  }
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  if (adminOnlyRoutes.includes(route) && user.role_id !== 1) {
+    alert('Access denied. Admins only.');
+    location.hash = 'dashboard';
+    return;
+  }
+
+  if (doctorRestrictedRoutes.includes(route) && user.role_id === 2) {
+    alert('Access denied. You are not authorized to view this section.');
+    location.hash = 'dashboard';
     return;
   }
 

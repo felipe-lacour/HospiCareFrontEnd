@@ -115,14 +115,31 @@ export async function afterRender() {
                 entries.employee_id = form.getAttribute('data-editing-id');
             }
 
+            const validations = {
+              first_name: /^[A-Za-zÀ-ÿ\s]+$/,
+              last_name: /^[A-Za-zÀ-ÿ\s]+$/,
+              dni: /^\d+$/,
+              birth_date: /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
+              address: /^[A-Za-zÀ-ÿ0-9\s,.#-]+$/,
+              phone: /^\d{6,15}$/, // asumimos entre 6 y 15 dígitos
+              email: /^[^@]+@[^@]+\.[^@]+$/ // solo para fallback extra
+            };
+
             for (const [key, value] of Object.entries(entries)) {
-                if (isEditing && optionalInEditMode.includes(key)) continue;
-                if (!value.trim()) {
+              if (isEditing && optionalInEditMode.includes(key)) continue;
+
+              if (!value.trim()) {
                 alert(`Please fill in the ${key.replace('_', ' ')} field.`);
                 return;
-                }
-            }
+              }
 
+              const pattern = validations[key];
+              if (pattern && !pattern.test(value.trim())) {
+                alert(`Invalid value in "${key.replace('_', ' ')}" field.`);
+                return;
+              }
+            }
+            
             const url = isEditing
                 ? `http://localhost/HospiCareDev/BACKEND/public/employee/update`
                 : 'http://localhost/HospiCareDev/BACKEND/public/employee/store';

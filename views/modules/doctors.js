@@ -97,6 +97,8 @@ export async function afterRender() {
     let showInactive = false;
     let allDoctors = [];  
 
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const isAdmin = user.role_id === 1;
     const data = await res.json();
     const container = document.getElementById('doctors-list');
     const modal = document.getElementById('doctor-modal');
@@ -104,6 +106,11 @@ export async function afterRender() {
     const openBtn = document.querySelector('button.bg-sky-600');
     const cancelBtn = document.getElementById('cancel-doctor');
     const optionalInEditMode = ['dni', 'birth_date'];
+
+    if (!isAdmin) {
+      document.getElementById('toggle-inactive')?.closest('label')?.classList.add('hidden');
+      openBtn?.classList.add('hidden');
+    }
 
     if (!res.ok) {
       container.innerHTML = `<p class="text-red-500">Error: ${data.error}</p>`;
@@ -145,14 +152,33 @@ export async function afterRender() {
         entries.doctor_id = form.getAttribute('data-editing-id');
       }
 
+      const validations = {
+        first_name: /^[A-Za-zÀ-ÿ\s]+$/,
+        last_name: /^[A-Za-zÀ-ÿ\s]+$/,
+        dni: /^\d+$/,
+        birth_date: /^\d{4}-\d{2}-\d{2}$/, // formato YYYY-MM-DD
+        address: /^[A-Za-zÀ-ÿ0-9\s,.#-]+$/, // texto + números comunes
+        phone: /^\d{6,15}$/, // asumimos mínimo 6, máx 15 dígitos
+        email: /^[^@]+@[^@]+\.[^@]+$/, // aunque ya lo valida HTML
+        license_no: /^[A-Za-z0-9-]+$/, // alfanumérico común
+        specialty: /^[A-Za-zÀ-ÿ\s]+$/
+      };
+
       for (const [key, value] of Object.entries(entries)) {
         if (isEditing && optionalInEditMode.includes(key)) continue;
+
         if (!value.trim()) {
           alert(`Please fill in the ${key.replace('_', ' ')} field.`);
           return;
         }
-      }
 
+        const pattern = validations[key];
+        if (pattern && !pattern.test(value.trim())) {
+          alert(`Invalid value in "${key.replace('_', ' ')}" field.`);
+          return;
+        }
+      }
+      
       const url = isEditing
         ? `http://localhost/HospiCareDev/BACKEND/public/doctors/update`
         : 'http://localhost/HospiCareDev/BACKEND/public/doctors/store';
@@ -213,6 +239,10 @@ export async function afterRender() {
 
     function renderDoctorsList() {
       const container = document.getElementById('doctors-list');
+      if (!isAdmin) {
+        document.getElementById('toggle-inactive')?.closest('label')?.classList.add('hidden');
+        openBtn?.classList.add('hidden');
+      }
       container.innerHTML = '';
 
       const filtered = showInactive ? allDoctors : allDoctors.filter(d => Boolean(d.employed));
@@ -257,9 +287,9 @@ export async function afterRender() {
     }
 
     function rowTemplate(doctor) {
-      const actionButton = doctor.employed
-        ? `<button class="delete-btn"><img src="../../img/archive.svg" alt="Delete" class="h-5" /><span class="sr-only">Delete</span></button>`
-        : `<button class="reactivate-btn"><img src="../../img/unarchive.svg" alt="Reactivate" class="h-5" /><span class="sr-only">Reactivate</span></button>`;
+      const actionButton = !isAdmin ? '' : doctor.employed
+      ? `<button class="delete-btn"><img src="../../img/archive.svg" alt="Delete" class="h-5" /><span class="sr-only">Delete</span></button>`
+      : `<button class="reactivate-btn"><img src="../../img/unarchive.svg" alt="Reactivate" class="h-5" /><span class="sr-only">Reactivate</span></button>`;
 
       return `
         <tr id="doctor-${doctor.doctor_id}" class="hover:bg-gray-50 ${doctor.employed ? '' : 'opacity-60'}">
@@ -271,7 +301,7 @@ export async function afterRender() {
           <td class="px-3 py-4 text-sm text-gray-500">${doctor.phone}</td>
           <td class="relative py-4 pr-4 pl-3 text-right text-sm font-medium sm:pr-6">
             <div class="flex justify-end gap-3">
-              ${doctor.employed ? '<button class="edit-btn"><img src="../../img/edit.svg" alt="Edit" class="h-5" /></button>' : ''}
+              ${doctor.employed && isAdmin ? '<button class="edit-btn"><img src="../../img/edit.svg" alt="Edit" class="h-5" /></button>' : ''}
               ${actionButton}
             </div>
           </td>
