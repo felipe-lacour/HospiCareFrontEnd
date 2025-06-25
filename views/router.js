@@ -1,17 +1,17 @@
 import { renderLayout } from './layout.js';
 
 export async function router() {
-  const route = location.hash.slice(1) || 'login';
+  const [route, ...params] = location.hash.slice(1).split('/');
   const token = localStorage.getItem('token');
   const layoutRoot = document.getElementById('layout');
 
-  // 🛑 Safety check
+  // 🛑 Verifica que exista el div con id="layout"
   if (!layoutRoot) {
     console.error('Missing #layout div in HTML');
     return;
   }
 
-  // 🟡 LOGIN route — show only login screen, no layout
+  // 🟡 LOGIN — no se muestra layout si estás en login
   if (route === 'login') {
     layoutRoot.innerHTML = '';
     const module = await import(`./modules/login.js`);
@@ -37,8 +37,8 @@ export async function router() {
     return;
   }
 
-  // ✅ Authenticated: render layout + load module
-  renderLayout(); // renders sidebar + #app
+  // ✅ Usuario autenticado: render layout y módulo
+  renderLayout(); // esto renderiza la sidebar + <main id="app">
 
   const app = document.getElementById('app');
   if (!app) {
@@ -48,10 +48,11 @@ export async function router() {
 
   try {
     const module = await import(`./modules/${route}.js`);
-    const html = await module.render();
+    const html = await module.render(...params); // ← pasar parámetros como MRN
     app.innerHTML = html;
-    if (module.afterRender) module.afterRender();
+    if (module.afterRender) module.afterRender(...params);
   } catch (e) {
+    console.error(e);
     app.innerHTML = `<p class="text-red-500">Module "${route}" not found.</p>`;
   }
 }
